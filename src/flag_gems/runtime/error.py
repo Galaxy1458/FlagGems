@@ -1,6 +1,10 @@
 import logging
 
 
+def PASS(e):
+    pass
+
+
 class ErrorHandler:
     def __init__(self, callback_fn=None):
         logging.basicConfig(

@@ -33,6 +33,9 @@ def add_kernel(
 
 
 def add(x: torch.Tensor, y: torch.Tensor):
+    print(
+        "\n...................test kernel for muti_backend ................\n...............\n...............\n"
+    )
     # We need to preallocate the output.
     output = torch.empty_like(x)
     assert x.is_cuda and y.is_cuda and output.is_cuda

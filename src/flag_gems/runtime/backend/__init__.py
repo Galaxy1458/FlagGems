@@ -1,21 +1,30 @@
 import ast
+from enum import Enum
 
-from .cambricon import *  # noqa: F403
-from .iluvatar import *  # noqa: F403
-from .kunlunxin import *  # noqa: F403
-from .mlu import *  # noqa: F403
-from .mthreads import *  # noqa: F403
 
-vendor_list = [
-    "nvidia",
-    "cambricon",
-    "iluvatar",
-    "kunlunxin",
-    "mlu",
-    "mthreads",
-    "dcu",
-    "ascend",
-]
+class vendors(Enum):
+    NVIDIA = 0
+    CAMBRICON = 1
+    ASCEND = 2
+    ILUVATAR = 3
+    MTHREAD = 4
+    KUNLUNXIN = 5
+    HYGON = 7
+
+
+vendors_map = {
+    "nvidia": vendors.NVIDIA,
+    "cambricon": vendors.CAMBRICON,
+    "iluvatar": vendors.ILUVATAR,
+    "kunlunxin": vendors.KUNLUNXIN,
+    "mthreads": vendors.MTHREAD,
+    "hygon": vendors.HYGON,
+    "ascend": vendors.ASCEND,
+}
+
+
+def PASS(e):
+    pass
 
 
 class scheduler:
@@ -28,14 +37,7 @@ class scheduler:
 from . import {vendor_name}
 fn = {vendor_name}.device.get_torch_device_guard_fn()
 """
-        try:
-            parsed_ast = ast.parse(code)
-            compiled_code = compile(parsed_ast, filename="<ast>", mode="exec")
-            exec(compiled_code, globals())
-        except Exception as e:
-            raise RuntimeError(e)
-
-        return globals()["fn"]
+        return scheduler.get_codegen_result(code, "fn")
 
     @staticmethod
     def get_vendor_info(vendor_name):
@@ -43,30 +45,35 @@ fn = {vendor_name}.device.get_torch_device_guard_fn()
 from . import {vendor_name}
 info = {vendor_name}.device.get_vendor_info()
 """
+        return scheduler.get_codegen_result(code, "info")
+
+    @staticmethod
+    def get_codegen_result(code, result_key):
         parsed_ast = ast.parse(code)
         compiled_code = compile(parsed_ast, filename="<ast>", mode="exec")
         try:
             exec(compiled_code, globals())
         except Exception as e:
             RuntimeError(e)
-        return globals()["info"]
+        return globals()[result_key]
 
     @staticmethod
     def get_vendor_infos() -> list:
         infos = []
-        for vendor_name in vendor_list:
+        for vendor_name in vendors_map:
             try:
-                infos.append(scheduler.get_vendor_info(vendor_name))
+                single_info = scheduler.get_vendor_info(vendor_name)
+                infos.append(single_info + (vendors_map[single_info[0]],))
             except Exception as e:
-                e
+                PASS(e)
         return infos
 
     @staticmethod
     def get_curent_device_extend_op(vendor_name) -> dict:
         code = f"""
-            fn = {vendor_name}.Op.get_current_extend_ops()
+fn = {vendor_name}.Op.get_current_extend_ops()
         """
-        code
+        return scheduler.get_codegen_result(code, "fn")
 
 
 def device_guard_fn(vendor_name):

@@ -3,6 +3,7 @@ import torch
 from . import testing  # noqa: F401
 from .fused import *  # noqa: F403
 from .ops import *  # noqa: F403
+from .runtime import vendors
 from .runtime.backend import device_guard_fn
 from .runtime.register import Register  # noqa: F403
 
@@ -18,7 +19,7 @@ class entry:
         pass
 
 
-def enable(lib=aten_lib, unused_ops_list=[], device=None):
+def enable(lib=aten_lib, unused_ops_list=[], vendor=None):
     BACKEND = True
     FORWARD = False
     global register
@@ -109,17 +110,18 @@ def enable(lib=aten_lib, unused_ops_list=[], device=None):
         lib=lib,
         debug=True,
         unused_ops_list=unused_ops_list,
+        default_vendor=vendor,
     )
 
 
 class use_gems:
-    def __init__(self, unused_ops_list=[], device=None):
+    def __init__(self, unused_ops_list=[], vendor=None):
         self.lib = torch.library.Library("aten", "IMPL")
         self.unused_ops_list = unused_ops_list
-        self.device = device
+        self.vendor = vendor
 
     def __enter__(self):
-        enable(self.lib, unused_ops_list=self.unused_ops_list, device=self.device)
+        enable(self.lib, unused_ops_list=self.unused_ops_list, vendor=self.vendor)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         del self.lib
@@ -149,4 +151,4 @@ def device_guard(device_info):
     return device_guard_fn(vendor())(device_info)
 
 
-__all__ = ["enable", "use_gems", "get_forward_ops" "device" "device_guard"]
+__all__ = ["enable", "use_gems", "get_forward_ops" "device" "device_guard", "vendors"]
