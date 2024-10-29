@@ -2,9 +2,6 @@ from typing import Optional
 
 from . import backend, device, error
 
-BACKEND = True
-FORWARD = False
-
 # import triton
 
 
@@ -34,7 +31,6 @@ class Register:
         self.vendor_list = backend.vendors_map.keys()
         self._check_backend()
         self.unused_ops = unused_ops_list
-        self.dispatch_backend_key_prefix = "Autograd"
         self.for_each(config, lib)
         if debug:
             self._set_info(config)
@@ -73,7 +69,7 @@ class Register:
             return True
 
     def registerImpl(self, lib, key, val, device):
-        device_auto = self.dispatch_backend_key_prefix + device
+        device_auto = backend.AUTOGRAD + device
         if key in self.vendor_extend_config:
             func, hasbacken = self.vendor_extend_config[key]
         else:
