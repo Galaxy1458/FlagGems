@@ -4,7 +4,7 @@ from . import testing  # noqa: F401
 from .fused import *  # noqa: F403
 from .ops import *  # noqa: F403
 from .runtime import vendors
-from .runtime.backend import device_guard_fn
+from .runtime.backend import action, device_guard_fn
 from .runtime.register import Register  # noqa: F403
 
 __version__ = "2.1"
@@ -20,8 +20,8 @@ class entry:
 
 
 def enable(lib=aten_lib, unused_ops_list=[], vendor=None):
-    BACKEND = True
-    FORWARD = False
+    BACKEND = action.BACKEND
+    FORWARD = action.FORWARD
     global register
     register = Register(
         config={

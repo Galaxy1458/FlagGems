@@ -2,6 +2,11 @@ import ast
 from enum import Enum
 
 
+class action(Enum):
+    BACKEND = True
+    FORWARD = False
+
+
 class vendors(Enum):
     NVIDIA = 0
     CAMBRICON = 1
