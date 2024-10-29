@@ -4,32 +4,20 @@ import torch
 
 import flag_gems as gems
 
-# start_time = time.time()  # 记录开始时间
+start_time = time.time()
 
-# 需要测量的代码段
+with gems.use_gems():
+    x = torch.randn([2, 3], dtype=torch.float32, device=gems.device())
+    x_ = torch.randn([3, 2], dtype=torch.float32, device="cuda")
+    y = torch.add(x, x)
+    z = torch.sin(x_)
+    print(y, z)
 
-
-gems.enable(vendor="nvidia")
-# with gems.use_gems():
-#     x = torch.randn([2, 3], dtype=torch.float32, device='cuda')
-#     x_ = torch.randn([3, 2], dtype=torch.float32, device="cuda")
-#     # y = torch.add(x, x)
-#     z = torch.mm(x, x_)
-#     print(z)
-
-# x = torch.tensor([2, 5], device=gems.device())
-# with gems.device_guard(x.device):
-#     print(x)
-start_time = time.time()  # 记录开始时间
-
-x = torch.randn([2, 3], dtype=torch.float32, device="cuda")
-x_ = torch.randn([3, 2], dtype=torch.float32, device="cuda")
-y = torch.add(x, x)
-z = torch.sin(x_)
-print(y, z)
+x = torch.tensor([2, 5], device=gems.device())
+with gems.device_guard(x.device):
+    c = torch.add(x, x)
 
 
-end_time = time.time()  # 记录结束时间
-
-execution_time = end_time - start_time  # 计算执行时间
+end_time = time.time()
+execution_time = end_time - start_time
 print(f"Execution time: {execution_time:.6f} seconds")

@@ -13,7 +13,7 @@ class Register:
         self,
         config: Optional[dict],
         lib: Optional[any] = None,
-        debug: Optional[bool] = False,
+        debug: Optional[bool] = True,
         unused_ops_list: Optional[list] = [],
         default_vendor=None,
     ):
