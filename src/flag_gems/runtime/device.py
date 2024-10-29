@@ -37,6 +37,12 @@ class Device:
                 return info
         error.ErrorHandler().device_not_found()
 
+    def get_device_name(self):
+        return self.device_name
+
+    def get_vendor_name(self):
+        return self.vendor_name
+
     def _get_vendor_from_lib(self):
         return triton.get_vendor_info()
 

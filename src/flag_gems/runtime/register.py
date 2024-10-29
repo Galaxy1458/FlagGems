@@ -35,7 +35,7 @@ class Register:
         self._check_backend()
         self.unused_ops = unused_ops_list
         self.dispatch_backend_key_prefix = "Autograd"
-        self.all(config, lib)
+        self.for_each(config, lib)
         if debug:
             self._set_info(config)
             self._set_info(self.vendor_extend_config)
@@ -60,6 +60,9 @@ class Register:
             return backend.scheduler.get_curent_device_extend_op(self.vendor_name)
         return {}
 
+    def get_vendor_unused_op():
+        pass
+
     def __pass_register_cond(self, key):
         if key in self.unused_ops:
             return False
@@ -79,7 +82,7 @@ class Register:
         else:
             lib.impl(key, func, device)
 
-    def all(self, config, lib):
+    def for_each(self, config, lib):
         device = self.device_name.upper()
         try:
             for key, val in config.items():
@@ -111,7 +114,7 @@ class Register:
     def get_unused_ops(self) -> list:
         return self.unused_ops
 
-    def get_vendor_name(self) -> list:
+    def get_vendor_name(self) -> str:
         return self.vendor_name
 
     def get_current_device(self) -> str:
