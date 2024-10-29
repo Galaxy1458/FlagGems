@@ -56,7 +56,8 @@ class Register:
             )
 
     def get_backend_extend_op(self):
-        if self.vendor_name != "nvidia":
+        # for demo , real is self.vendor_name != "nvidia":
+        if self.vendor_name == "nvidia":
             return backend.scheduler.get_curent_device_extend_op(self.vendor_name)
         return {}
 
