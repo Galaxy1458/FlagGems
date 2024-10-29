@@ -1,6 +1,8 @@
 import ast
 from enum import Enum
 
+AUTOGRAD = "Autograd"
+
 
 class action(Enum):
     BACKEND = True
