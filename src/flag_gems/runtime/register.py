@@ -2,36 +2,37 @@ from typing import Optional
 
 from . import backend, device, error
 
-# import triton
-
 
 class Register:
     def __init__(
         self,
-        config: Optional[dict],
+        config: Optional[tuple[tuple]],
         lib: Optional[any] = None,
         debug: Optional[bool] = True,
-        unused_ops_list: Optional[list] = [],
+        unused_ops_list: Optional[list[str]] = [],
         default_vendor=None,
     ):
         self.device = device.Device()
+        self.lib = lib
         self.vendor_unused_ops = []
         self.vendor_extend_config = {}
         if default_vendor is not None:
             self.__user_init(default_vendor)
         else:
             self.__default_init()
+        self.device_upper = self.device_name.upper()
+        self.DEBUG = debug
         self.forward_ops = []
         self.backend_ops = []
         self.config = config
         # if self.vendor != default_vendor:
-        self.vendor_extend_config = self.get_backend_extend_op()
-        # self.vendor_unused_ops = self.get_vendor_unused_op()
-        self.DEBUG = debug
-        self.vendor_list = backend.vendors_map.keys()
-        self._check_backend()
+
+        self.vendor_extend_config = self.get_vendor_extend_op()
+        self.vendor_unused_ops = self.get_vendor_unused_op()
+        self.vendor_list = list(backend.vendors_map.keys())
         self.unused_ops = unused_ops_list
-        self.for_each(config, lib)
+        self._check_backend()
+        self.for_each(config)
         if debug:
             self._set_info(config)
             self._set_info(self.vendor_extend_config)
@@ -51,64 +52,54 @@ class Register:
                 self.device_name, self.backend_list
             )
 
-    def get_backend_extend_op(self):
+    def get_vendor_extend_op(self):
         # for demo , real is self.vendor_name != "nvidia":
         if self.vendor_name == "nvidia":
             return backend.scheduler.get_curent_device_extend_op(self.vendor_name)
+        return ()
+
+    def get_vendor_unused_op(self):
+        if self.vendor_name == "nvidia":
+            # for demo , real is self.vendor_name != "nvidia":
+            return backend.scheduler.get_curent_device_unused_op(self.vendor_name)
         return {}
 
-    def get_vendor_unused_op():
-        pass
-
     def __pass_register_cond(self, key):
-        if key in self.unused_ops:
-            return False
-        elif key in key in self.vendor_unused_ops:
-            return False
-        else:
-            return True
+        return key not in self.unused_ops and key not in self.vendor_unused_ops
 
-    def registerImpl(self, lib, key, val, device):
-        device_auto = backend.AUTOGRAD + device
+    def registerImpl(self, key, fn, has_backward):
+        device_auto = backend.AUTOGRAD + self.device_upper
         if key in self.vendor_extend_config:
-            func, hasbacken = self.vendor_extend_config[key]
-        else:
-            func, hasbacken = val
-        if hasbacken:
-            lib.impl(key, func, device_auto)
-        else:
-            lib.impl(key, func, device)
+            fn, has_backward = (
+                self.vendor_extend_config[1],
+                self.vendor_extend_config[2],
+            )
+        self.lib.impl(key, fn, device_auto if has_backward else self.device_upper)
 
-    def for_each(self, config, lib):
-        device = self.device_name.upper()
+    def for_each(self, config):
         try:
-            for key, val in config.items():
+            for key, func, has_backward in config:
                 if self.__pass_register_cond(key):
-                    self.registerImpl(lib, key, val, device)
+                    self.registerImpl(key, func, has_backward)
 
         except Exception as e:
             error.PASS(e)
             error.ErrorHandler().register_error()
 
     def _set_info(self, config):
-        for val in config.values():
-            fn, hasbackend = val
+        for _, fn, hasbackward in config:
             fn_name = fn.__name__
-            self.backend_ops.append(fn_name) if hasbackend else self.forward_ops.append(
+            self.backend_ops.append(
                 fn_name
-            )
+            ) if hasbackward else self.forward_ops.append(fn_name)
 
-    def get_forward_ops(self) -> list:
-        if self.DEBUG is False:
-            return
-        return self.forward_ops
+    def get_forward_ops(self) -> list[str]:
+        return self.forward_ops if self.DEBUG else []
 
-    def get_backend_ops(self) -> list:
-        if self.DEBUG is False:
-            return
-        return self.backend_ops
+    def get_backend_ops(self) -> list[str]:
+        return self.backend_ops if self.DEBUG else []
 
-    def get_unused_ops(self) -> list:
+    def get_unused_ops(self) -> list[str]:
         return self.unused_ops
 
     def get_vendor_name(self) -> str:

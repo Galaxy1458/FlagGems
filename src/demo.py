@@ -8,11 +8,10 @@ gems.enable()
 
 start_time = time.time()
 
-
-x = torch.randn([2, 3], dtype=torch.float32, device=gems.device())
+x = torch.randn([1024, 2048], dtype=torch.float32, device=gems.device())
 x_ = torch.randn([3, 2], dtype=torch.float32, device="cuda")
 y = torch.add(x, x)
-z = torch.sin(x_)
+z = torch.cos(x_)
 print(y, z)
 
 x = torch.tensor([2, 5], device=gems.device())

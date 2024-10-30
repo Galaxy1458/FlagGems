@@ -1,6 +1,10 @@
+import logging
+
 import torch
 import triton
 import triton.language as tl
+
+logging.basicConfig(level=logging.DEBUG)
 
 
 @triton.jit
@@ -33,7 +37,7 @@ def add_kernel(
 
 
 def add(x: torch.Tensor, y: torch.Tensor):
-    print(
+    logging.debug(
         "\n...................test kernel for muti_backend ................\n...............\n...............\n"
     )
     # We need to preallocate the output.

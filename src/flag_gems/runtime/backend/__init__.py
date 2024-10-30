@@ -82,6 +82,13 @@ fn = {vendor_name}.Op.get_current_extend_ops()
         """
         return scheduler.get_codegen_result(code, "fn")
 
+    @staticmethod
+    def get_curent_device_unused_op(vendor_name) -> list:
+        code = f"""
+fn = {vendor_name}.Op.get_unused_op()
+        """
+        return scheduler.get_codegen_result(code, "fn")
+
 
 def device_guard_fn(vendor_name):
     return scheduler.get_device_guard_fn(vendor_name)

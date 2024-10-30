@@ -1,6 +1,6 @@
 import torch
 
-from .op import get_register_config
+from .op import *  # noqa: F403
 
 
 # from ..common import base_device
@@ -36,3 +36,6 @@ class Op:
     @staticmethod
     def get_current_extend_ops():
         return get_register_config()
+
+    def get_unused_ops():
+        return get_unused_op()
