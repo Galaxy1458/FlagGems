@@ -2,22 +2,15 @@ import logging
 
 import torch
 
-# C extensions
-try:
-    from flag_gems import ext_ops  # noqa: F401
-
-    has_c_extension = True
-except ImportError:
-    has_c_extension = False
-
-from . import testing  # noqa: F401
-from . import runtime
-from .fused import *  # noqa: F403
-from .logging_utils import setup_flaggems_logging
-from .modules import *  # noqa: F403
-from .ops import *  # noqa: F403
-from .patches import *  # noqa: F403
-from .runtime.register import Register
+from flag_gems import testing  # noqa: F401
+from flag_gems import runtime
+from flag_gems.config import aten_patch_list
+from flag_gems.fused import *  # noqa: F403
+from flag_gems.logging_utils import setup_flaggems_logging
+from flag_gems.modules import *  # noqa: F403
+from flag_gems.ops import *  # noqa: F403
+from flag_gems.patches import *  # noqa: F403
+from flag_gems.runtime.register import Register
 
 __version__ = "3.0"
 device = runtime.device.name
@@ -115,6 +108,8 @@ def enable(
             ("divide_.Tensor_mode", div_mode_),
             ("dot", dot),
             ("elu", elu),
+            ("elu_", elu_),
+            ("elu_backward", elu_backward),
             ("embedding", embedding),
             ("embedding_backward", embedding_backward),
             ("eq.Scalar", eq_scalar),
@@ -123,6 +118,8 @@ def enable(
             ("erf_", erf_),
             ("exp", exp),
             ("exp_", exp_),
+            ("exp2", exp2),
+            ("exp2_", exp2_),
             ("exponential_", exponential_),
             ("eye", eye),
             ("eye.m", eye_m),
@@ -145,11 +142,13 @@ def enable(
             ("gelu_", gelu_),
             ("gelu_backward", gelu_backward),
             ("glu", glu),
+            ("glu_backward", glu_backward),
             ("gt.Scalar", gt_scalar),
             ("gt.Tensor", gt),
             ("hstack", hstack),
-            ("index.Tensor", index),
+            # ("index.Tensor", index),
             ("index_add", index_add),
+            ("index_add_", index_add_),
             ("index_put", index_put),
             ("index_put_", index_put_),
             ("index_select", index_select),
@@ -175,6 +174,7 @@ def enable(
             ("logical_not", logical_not),
             ("logical_or", logical_or),
             ("logical_xor", logical_xor),
+            ("logspace", logspace),
             ("lt.Scalar", lt_scalar),
             ("lt.Tensor", lt),
             ("masked_fill.Scalar", masked_fill),
@@ -239,6 +239,8 @@ def enable(
             ("reciprocal_", reciprocal_),
             ("relu", relu),
             ("relu_", relu_),
+            ("addcmul", addcmul),
+            ("softplus", softplus),
             ("remainder.Scalar", remainder),
             ("remainder.Scalar_Tensor", remainder),
             ("remainder.Tensor", remainder),
@@ -251,6 +253,8 @@ def enable(
             ("resolve_conj", resolve_conj),
             ("resolve_neg", resolve_neg),
             ("rms_norm", rms_norm),
+            ("sqrt", sqrt),
+            ("sqrt_", sqrt_),
             ("rsqrt", rsqrt),
             ("rsqrt_", rsqrt_),
             ("scatter.reduce", scatter),
@@ -301,7 +305,9 @@ def enable(
             ("zeros", zeros),
             ("zeros_like", zeros_like),
         ),
-        user_unused_ops_list=[] if unused is None else unused,
+        user_unused_ops_list=list(
+            set([] if unused is None else unused) | set(aten_patch_list)
+        ),
         lib=lib,
     )
     setup_flaggems_logging(path=path, record=record, once=once)

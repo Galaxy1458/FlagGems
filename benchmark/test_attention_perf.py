@@ -7,7 +7,7 @@ import triton
 
 import flag_gems
 
-from .performance_utils import Benchmark, GenericBenchmark, vendor_name
+from .performance_utils import Benchmark, GenericBenchmark, SkipVersion, vendor_name
 
 
 class AttentionBenchmark(GenericBenchmark):
@@ -21,10 +21,10 @@ class AttentionBenchmark(GenericBenchmark):
         return None
 
 
+@pytest.mark.skipif(vendor_name == "metax", reason="TODOFIX")
 @pytest.mark.skipif(vendor_name == "kunlunxin", reason="RESULT TODOFIX")
-@pytest.mark.skipif(
-    flag_gems.device == "musa" or vendor_name == "hygon", reason="RuntimeError"
-)
+@pytest.mark.skipif(vendor_name == "hygon", reason="RuntimeError")
+@pytest.mark.skipif(vendor_name == "mthreads", reason="RuntimeError")
 @pytest.mark.scaled_dot_product_attention
 @pytest.mark.parametrize("dropout_p", [0.0, 0.25])
 @pytest.mark.parametrize("is_causal", [True, False])
@@ -72,11 +72,10 @@ class FlashMLABenchmark(GenericBenchmark):
         return None
 
 
+@pytest.mark.skipif(vendor_name == "metax", reason="TODOFIX")
 @pytest.mark.skipif(vendor_name == "kunlunxin", reason="RESULT TODOFIX")
-@pytest.mark.skipif(vendor_name == "iluvatar", reason="RESULT TODOFIX")
-@pytest.mark.skipif(
-    flag_gems.device == "musa" or vendor_name == "hygon", reason="RuntimeError"
-)
+@pytest.mark.skipif(vendor_name == "hygon", reason="RuntimeError")
+@pytest.mark.skipif(vendor_name == "mthreads", reason="RESULT TODOFIX")
 @pytest.mark.skipif(flag_gems.vendor_name == "cambricon", reason="TypeError")
 @pytest.mark.flash_mla
 def test_perf_flash_mla():
@@ -276,14 +275,24 @@ class FlashAttnVarlenBenchmark(Benchmark):
         )
 
 
+@pytest.mark.skipif(
+    SkipVersion("vllm", "<0.9"),
+    reason="The version prior to 0.9 does not include the flash_attn_varlen_func API in vllm.",
+)
+@pytest.mark.skipif(
+    SkipVersion("torch", "<2.7"),
+    reason="The version prior to 2.7 is not compatible with VLLM.",
+)
 @pytest.mark.skipif(vendor_name == "kunlunxin", reason="RESULT TODOFIX")
 @pytest.mark.skipif(vendor_name == "iluvatar", reason="RESULT TODOFIX")
-@pytest.mark.skipif(
-    flag_gems.device == "musa" or vendor_name == "hygon", reason="RuntimeError"
-)
+@pytest.mark.skipif(vendor_name == "hygon", reason="RuntimeError")
+@pytest.mark.skipif(vendor_name == "mthreads", reason="Torch < 2.7")
 @pytest.mark.skipif(flag_gems.vendor_name == "cambricon", reason="TypeError")
 @pytest.mark.flash_attn_varlen_func
 def test_perf_flash_attn_varlen_func():
+    import os
+
+    os.environ["VLLM_CONFIGURE_LOGGING"] = "0"
     from vllm.vllm_flash_attn.flash_attn_interface import flash_attn_varlen_func
 
     bench = FlashAttnVarlenBenchmark(
@@ -295,4 +304,127 @@ def test_perf_flash_attn_varlen_func():
         ],
     )
     bench.set_gems(flag_gems.ops.flash_attn_varlen_func)
+    bench.run()
+
+
+class GetSchedulerMetadataBenchmark(GenericBenchmark):
+    """
+    benchmark for get_scheduler_metadata
+    """
+
+    def set_shapes(self, shape_file_path=None):
+        self.shapes = [
+            (256, 256, 2048, 32, 32, 128, 128),
+            (512, 512, 4096, 32, 8, 128, 128),
+            (1024, 1024, 8192, 64, 16, 128, 128),
+        ]
+
+    def set_more_shapes(self):
+        return None
+
+
+@pytest.mark.get_scheduler_metadata
+def test_perf_get_scheduler_metadata():
+    try:
+        from vllm.vllm_flash_attn.flash_attn_interface import (
+            get_scheduler_metadata as vllm_get_scheduler_metadata,
+        )
+    except ImportError:
+        pytest.skip("vllm is not available, skipping performance test")
+
+    def input_kwargs(shape, dtype, device):
+        (
+            batch_size,
+            max_seqlen_q,
+            max_seqlen_k,
+            num_heads_q,
+            num_heads_kv,
+            headdim,
+            headdim_v,
+        ) = shape
+        cache_seqlens = torch.randint(
+            1, max_seqlen_k + 1, (batch_size,), dtype=torch.int32, device=device
+        )
+
+        yield (
+            batch_size,
+            max_seqlen_q,
+            max_seqlen_k,
+            num_heads_q,
+            num_heads_kv,
+            headdim,
+            cache_seqlens,
+            dtype,  # qkv_dtype
+            headdim_v,  # headdim_v
+            None,  # cu_seqlens_q
+            None,  # cu_seqlens_k_new
+            None,  # cache_leftpad
+            None,  # page_size
+            0,  # max_seqlen_k_new
+            False,  # causal
+            (-1, -1),  # window_size
+            False,  # has_softcap
+            0,  # num_splits
+            None,  # pack_gqa
+            0,  # sm_margin
+        )
+
+    def flaggems_wrapper(
+        batch_size,
+        max_seqlen_q,
+        max_seqlen_k,
+        num_heads_q,
+        num_heads_kv,
+        headdim,
+        cache_seqlens,
+        qkv_dtype=torch.bfloat16,
+        headdim_v=None,
+        cu_seqlens_q=None,
+        cu_seqlens_k_new=None,
+        cache_leftpad=None,
+        page_size=None,
+        max_seqlen_k_new=0,
+        causal=False,
+        window_size=(-1, -1),
+        has_softcap=False,
+        num_splits=0,
+        pack_gqa=None,
+        sm_margin=0,
+    ):
+        return flag_gems.ops.get_scheduler_metadata(
+            batch_size=batch_size,
+            max_seqlen_q=max_seqlen_q,
+            max_seqlen_k=max_seqlen_k,
+            num_heads=num_heads_q,
+            num_heads_k=num_heads_kv,
+            headdim=headdim,
+            headdim_v=headdim_v or headdim,
+            qkv_dtype=qkv_dtype,
+            seqused_k=cache_seqlens,
+            cu_seqlens_q=cu_seqlens_q,
+            cu_seqlens_k=None,
+            cu_seqlens_k_new=cu_seqlens_k_new,
+            seqused_q=None,
+            leftpad_k=cache_leftpad,
+            page_size=page_size,
+            max_seqlen_k_new=max_seqlen_k_new,
+            is_causal=causal,
+            window_size_left=window_size[0],
+            window_size_right=window_size[1],
+            has_softcap=has_softcap,
+            num_splits=num_splits,
+            pack_gqa=pack_gqa,
+            sm_margin=sm_margin,
+        )
+
+    bench = GetSchedulerMetadataBenchmark(
+        op_name="get_scheduler_metadata",
+        input_fn=input_kwargs,
+        torch_op=vllm_get_scheduler_metadata,
+        dtypes=[
+            torch.float16,
+            torch.bfloat16,
+        ],
+    )
+    bench.set_gems(flaggems_wrapper)
     bench.run()
